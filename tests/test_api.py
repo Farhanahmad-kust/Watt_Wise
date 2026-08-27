@@ -27,3 +27,11 @@ def test_manual_schema_rejects_negative_appliance_use() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_batch_example_is_downloadable_and_model_compatible() -> None:
+    response = client.get("/api/v1/batch/example?variant=typical")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert len(response.text.splitlines()) == 146
+    assert "Tdewpoint" in response.text.splitlines()[0]
