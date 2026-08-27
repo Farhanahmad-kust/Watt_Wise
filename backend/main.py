@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -18,6 +19,7 @@ from .schemas import (
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = Path(os.getenv("WATTWISE_MODEL_PATH", ROOT / "models" / "energy_forecaster.joblib"))
+logger = logging.getLogger("wattwise.api")
 
 app = FastAPI(
     title="WattWise Energy Forecast API",
@@ -88,6 +90,7 @@ def predict_manual(request: ManualPredictionRequest) -> dict[str, Any]:
             bundle=inference.load_bundle(MODEL_PATH),
         )
     except Exception as exc:
+        logger.exception("Manual inference failed")
         raise _service_error(exc) from exc
 
 
@@ -112,4 +115,5 @@ async def predict_batch(
                 row["forecast_for"] = row["forecast_for"].isoformat()
         return {"rows": rows, "row_count": len(rows), "tariff_per_kwh": tariff_per_kwh}
     except Exception as exc:
+        logger.exception("Batch inference failed")
         raise _service_error(exc) from exc
