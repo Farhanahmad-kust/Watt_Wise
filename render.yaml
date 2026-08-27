@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: wattwise-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: WATTWISE_CORS_ORIGINS
+        sync: false
