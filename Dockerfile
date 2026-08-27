@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PORT=7860
 
 WORKDIR /app
 COPY requirements.txt .
@@ -12,5 +12,5 @@ COPY backend ./backend
 COPY src ./src
 COPY models ./models
 
-EXPOSE 8000
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}"]
+EXPOSE 7860
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-7860}"]
