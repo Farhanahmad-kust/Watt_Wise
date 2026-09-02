@@ -71,12 +71,31 @@ function App() {
       const response = await fetch(`${API_URL}/api/v1/predict/batch?tariff_per_kwh=${form.tariff_per_kwh}`, { method: 'POST', body })
       const data = await response.json()
       if (!response.ok) throw new Error(data.detail || 'Unable to analyze CSV')
-      setBatchResult(data); setResult(null)
+      setBatchResult(data)
+      const firstRow = data?.rows?.[0] ?? null
+      setResult(firstRow ? {
+        prediction_wh: firstRow.prediction_wh,
+        lower_wh: firstRow.lower_90_wh,
+        upper_wh: firstRow.upper_90_wh,
+        estimated_cost: firstRow.estimated_cost,
+        anomaly_threshold_wh: firstRow.prediction_wh || 0,
+        observed_next_wh: firstRow.observed_next_wh ?? null,
+        high_use_indicator: firstRow.high_use_indicator ?? null,
+      } : null)
     } catch (submitError) { setError(submitError.message) } finally { setLoading(false) }
   }
 
-  const forecast = result?.prediction_wh || 0
-  const confidenceWidth = result ? Math.min(100, ((result.upper_wh - result.lower_wh) / Math.max(result.upper_wh, 1)) * 100) : 0
+  const displayResult = result || (batchResult?.rows?.[0] ? {
+    prediction_wh: batchResult.rows[0].prediction_wh,
+    lower_wh: batchResult.rows[0].lower_90_wh,
+    upper_wh: batchResult.rows[0].upper_90_wh,
+    estimated_cost: batchResult.rows[0].estimated_cost,
+    anomaly_threshold_wh: batchResult.rows[0].prediction_wh || 0,
+    observed_next_wh: batchResult.rows[0].observed_next_wh ?? null,
+    high_use_indicator: batchResult.rows[0].high_use_indicator ?? null,
+  } : null)
+  const forecast = displayResult?.prediction_wh || 0
+  const confidenceWidth = displayResult ? Math.min(100, ((displayResult.upper_wh - displayResult.lower_wh) / Math.max(displayResult.upper_wh, 1)) * 100) : 0
   const viewMeta = {
     overview: ['MONITORING / HOUSE 01', 'Energy overview', 'A clear view of what your building will use next.'],
     forecasts: ['WORKSPACE / FORECASTS', 'Forecast history', 'Review the predictions generated for your building.'],
@@ -117,11 +136,11 @@ function App() {
         <section className="hero-grid">
           <div className="forecast-card">
             <div className="card-heading"><div><span className="section-kicker"><Sparkles size={15} /> NEXT INTERVAL</span><h2>What will the building use?</h2></div><button className="more-button" aria-label="More forecast options">•••</button></div>
-            <div className="forecast-main"><div className="forecast-value">{result ? formatNumber(forecast, 1) : '—'}<span>Wh</span></div><div className="forecast-meta"><span className="forecast-arrow"><ArrowUpRight size={15} /> +10 min</span><span>Forecast horizon</span></div></div>
-            <div className="range-wrap"><div className="range-label"><span>Expected range</span><strong>{result ? `${formatNumber(result.lower_wh)}–${formatNumber(result.upper_wh)} Wh` : 'Run a forecast to see the range'}</strong></div><div className="range-track"><span className="range-fill" style={{ width: result ? `${Math.max(18, confidenceWidth)}%` : '0%' }} /><span className="range-marker" style={{ left: result ? '47%' : '0%' }} /></div><div className="range-foot"><span>Lower estimate</span><span>90% empirical interval</span><span>Upper estimate</span></div></div>
+            <div className="forecast-main"><div className="forecast-value">{displayResult ? formatNumber(forecast, 1) : '—'}<span>Wh</span></div><div className="forecast-meta"><span className="forecast-arrow"><ArrowUpRight size={15} /> +10 min</span><span>Forecast horizon</span></div></div>
+            <div className="range-wrap"><div className="range-label"><span>Expected range</span><strong>{displayResult ? `${formatNumber(displayResult.lower_wh)}–${formatNumber(displayResult.upper_wh)} Wh` : 'Run a forecast to see the range'}</strong></div><div className="range-track"><span className="range-fill" style={{ width: displayResult ? `${Math.max(18, confidenceWidth)}%` : '0%' }} /><span className="range-marker" style={{ left: displayResult ? '47%' : '0%' }} /></div><div className="range-foot"><span>Lower estimate</span><span>90% empirical interval</span><span>Upper estimate</span></div></div>
             <div className="forecast-foot"><span><ShieldCheck size={16} /> Validation-backed confidence</span><span className="muted">Model v1.0.0</span></div>
           </div>
-          <div className="metric-stack"><MetricCard icon={<Gauge size={19} />} label="Estimated cost" value={result ? `$${formatNumber(result.estimated_cost, 3)}` : '—'} note="at current tariff" accent="amber" /><MetricCard icon={<AlertTriangle size={19} />} label="High-use signal" value={result?.high_use_indicator === true ? 'Review now' : result?.high_use_indicator === false ? 'Within range' : 'Awaiting data'} note={result ? `Threshold ${formatNumber(result.anomaly_threshold_wh)} Wh` : 'Observed value needed'} accent={result?.high_use_indicator ? 'red' : 'mint'} /></div>
+          <div className="metric-stack"><MetricCard icon={<Gauge size={19} />} label="Estimated cost" value={displayResult ? `$${formatNumber(displayResult.estimated_cost, 3)}` : '—'} note="at current tariff" accent="amber" /><MetricCard icon={<AlertTriangle size={19} />} label="High-use signal" value={displayResult?.high_use_indicator === true ? 'Review now' : displayResult?.high_use_indicator === false ? 'Within range' : 'Awaiting data'} note={displayResult ? (displayResult.observed_next_wh != null ? `Observed ${formatNumber(displayResult.observed_next_wh)} Wh` : 'No observed value') : 'Observed value needed'} accent={displayResult?.high_use_indicator ? 'red' : 'mint'} /></div>
         </section>
 
         <section className="work-grid">
